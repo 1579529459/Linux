@@ -1,0 +1,44 @@
+#include<stdio.h>
+#include <sys/wait.h>
+#include<unistd.h>
+#include<string.h>
+#include<stdlib.h>
+#define NUM 100
+int main()
+{
+    while(1)
+    {printf("[MyminiShell wei]$:");
+    char str[NUM];
+    char* cmd[NUM];
+    int index = 0;
+    //读取长字符串指令;
+    fgets(str,NUM-1,stdin);
+    str[strlen(str) - 1] = '\0';
+    //切割字符串;
+    cmd[index] = strtok(str," ");
+    while(cmd[index] != NULL)
+    {
+        cmd[++index] = strtok(NULL," ");
+    }
+    //需要shell自己调用系统接口 而不是搞fork的特殊情况eg:cd 命令;(改自己的目录)
+    if(strcmp("cd",cmd[0])&&chdir(cmd[1])==0))
+    {
+          continue;
+    }
+    //创建fork塞入替换函数;
+    pid_t id =fork();
+    if(id==0)
+    {
+        //程序替换;
+      // char *tmp[]={"ls","-a",NULL};
+       execvp(cmd[0],cmd);
+     // printf("1:%s\n",cmd[0]);
+     // printf("2:%s\n",cmd[1]);
+     // printf("3:%s\n",cmd[2]);
+        printf("替换失败\n");
+    }
+        /......父进程这里等一下shell出来的子进程 然后继续;
+        waitpid(-1,NULL,0);
+    } 
+    return 0;
+}
