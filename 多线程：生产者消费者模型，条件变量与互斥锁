@@ -1,0 +1,140 @@
+  #include<stdio.h>                                                                                                    
+  #include<iostream>    
+  #include <sys/types.h>    
+  #include <sys/stat.h>    
+  #include<sys/wait.h>    
+  #include <fcntl.h>    
+  #include <unistd.h>    
+  #include<string.h>    
+  #include <sys/ipc.h>    
+  #include <sys/shm.h>    
+  #include<signal.h>    
+  #include<pthread.h>    
+  #include<semaphore.h>    
+  #include<vector>    
+  #include<queue>    
+  using namespace std;    
+      
+  class Bqueue    
+  {    
+      queue<int>q;    
+      int cap;    
+      pthread_cond_t full;    
+      pthread_cond_t empty;    
+      pthread_mutex_t lock;    
+      
+  public:    
+     void LockQueue()    
+      {    
+          pthread_mutex_lock(&lock);    
+      }    
+      void UnlockQueue()
+            {
+          pthread_mutex_unlock(&lock);
+      }
+      void Prowait()
+      {
+          pthread_cond_wait(&full,&lock);
+      }
+      void Conwait()
+      {
+          pthread_cond_wait(&empty,&lock);
+      }
+      void NotifyPro()
+      {
+          pthread_cond_signal(&full);
+      }
+      void NotifyCon()
+      {
+          pthread_cond_signal(&empty);
+      }
+      bool IsEmpty()
+      {
+          return q.size()==0?true:false;
+      }
+      bool IsFull()
+      {
+W>        return q.size()==cap?true:false;                                                                             
+      }
+  public:
+      Bqueue(int _cap = 8):cap(_cap)
+      {
+          pthread_mutex_init(&lock,NULL);
+                    pthread_cond_init(&full,NULL);
+          pthread_cond_init(&empty,NULL);
+      }
+      void PushData(const int& data)
+      {
+          LockQueue();
+          while(IsFull())
+          {
+              printf("queue is full,please consume\n");
+              NotifyCon();
+              Prowait();
+          }
+          q.push(data);
+          NotifyCon();
+          UnlockQueue();
+          
+      }
+      void PopData(int &data)
+      {
+          LockQueue();
+          while(IsEmpty())
+          {
+              printf("queue is empty,please product\n");
+              NotifyPro();   
+              Conwait();
+          }                                                                                                            
+          data = q.front();
+          q.pop();
+          NotifyPro();
+          UnlockQueue();
+      }
+      ~Bqueue()
+      {
+          pthread_mutex_destroy(&lock);
+          pthread_cond_destroy(&full);
+          pthread_cond_destroy(&empty);
+          
+      }
+  
+  };
+  
+  
+  void* consumer(void*arg)
+  {
+      Bqueue* bq = (Bqueue*)arg;
+      int tmp;
+      while(1)
+      {
+          bq->PopData(tmp);
+          cout<<pthread_self()<<"consumeData:"<<tmp<<endl;
+          sleep(1);
+      }
+  }
+  
+  
+  int main()
+  {
+      Bqueue bq;
+      pthread_t c,p;
+      pthread_create(&c,NULL,consumer,(void*)&bq);
+      pthread_create(&p,NULL,productor,(void*)&bq);
+  
+      pthread_join(c,NULL);
+      pthread_join(p,NULL);
+      return 0;
+  }                                                  
+  
+  void* productor(void*arg)
+  {
+      Bqueue* bq = (Bqueue*)arg;                                                                                       
+      while(1)
+      {
+          bq->PushData(8);
+          cout<<pthread_self()<<"productData:"<<8<<endl;
+          sleep(1);
+
+
+      
