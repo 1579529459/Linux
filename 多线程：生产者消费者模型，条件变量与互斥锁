@@ -136,5 +136,20 @@ W>        return q.size()==cap?true:false;
           cout<<pthread_self()<<"productData:"<<8<<endl;
           sleep(1);
 
-
+   }
+  }
+  
+  
+  
+  int main()
+  {
+      Bqueue bq;
+      pthread_t c,p;
+      pthread_create(&c,NULL,consumer,(void*)&bq);
+      pthread_create(&p,NULL,productor,(void*)&bq);
+  
+      pthread_join(c,NULL);
+      pthread_join(p,NULL);
+      return 0;
+  }                                
       
